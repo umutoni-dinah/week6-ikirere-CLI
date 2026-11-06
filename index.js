@@ -34,6 +34,7 @@ const weatherDescriptions = {
 
 const dataFolder = path.join(os.homedir(), ".ikirere");
 const historyFile = path.join(dataFolder, "history.json");
+const favoritesFile = path.join(dataFolder, "favorites.json");
 
 async function saveSearch(city) {
   let history = [];
@@ -80,6 +81,46 @@ async function showHistory() {
   }
 }
 
+async function readFavorites() {
+  try {
+    return JSON.parse(await readFile(favoritesFile, "utf8"));
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function addFavorite(city) {
+  const favorites = await readFavorites();
+
+  if (favorites.some((item) => item.toLowerCase() === city.toLowerCase())) {
+    console.log(`${city} is already a favorite.`);
+    return;
+  }
+
+  favorites.push(city);
+  await mkdir(dataFolder, { recursive: true });
+  await writeFile(favoritesFile, JSON.stringify(favorites, null, 2), "utf8");
+
+  console.log(`Saved ${city} as a favorite.`);
+}
+
+async function listFavorites() {
+  const favorites = await readFavorites();
+
+  if (favorites.length === 0) {
+    console.log("No favorite cities yet.");
+    return;
+  }
+
+  console.log("Favorite cities:");
+  favorites.forEach((city, index) => {
+    console.log(`${index + 1}. ${city}`);
+  });
+}
+
 const { values, positionals } = parseArgs({
   options: {
     help: { type: "boolean", short: "h" },
@@ -97,6 +138,25 @@ const city = positionals.join(" ").trim();
 if (city.toLowerCase() === "history") {
   await showHistory();
   process.exit(0);
+}
+
+if (positionals[0]?.toLowerCase() === "favorite") {
+  const action = positionals[1]?.toLowerCase();
+  const favoriteCity = positionals.slice(2).join(" ").trim();
+
+  if (action === "list") {
+    await listFavorites();
+    process.exit(0);
+  }
+
+  if (action === "add" && favoriteCity) {
+    await addFavorite(favoriteCity);
+    process.exit(0);
+  }
+
+  console.log("Use: node index.js favorite add <city>");
+  console.log("Or:  node index.js favorite list");
+  process.exitCode = 1;
 }
 
 if (!city) {
