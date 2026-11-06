@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import path from "node:path";
+import os from "node:os";
 
 const useFahrenheit = process.env.IKIRERE_UNITS?.toLowerCase() === "fahrenheit";
 
@@ -28,6 +31,32 @@ const weatherDescriptions = {
   96: "Thunderstorm with hail",
   99: "Thunderstorm with hail",
 };
+
+const dataFolder = path.join(os.homedir(), ".ikirere");
+const historyFile = path.join(dataFolder, "history.json");
+
+async function saveSearch(city) {
+  let history = [];
+
+  try {
+    const savedText = await readFile(historyFile, "utf8");
+    history = JSON.parse(savedText);
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  history.unshift({
+    city: city,
+    searchedAt: new Date().toISOString(),
+  });
+
+  history = history.slice(0, 10);
+
+  await mkdir(dataFolder, { recursive: true });
+  await writeFile(historyFile, JSON.stringify(history, null, 2), "utf8");
+}
 
 const { values, positionals } = parseArgs({
   options: {
@@ -106,15 +135,22 @@ if (!city) {
       const weatherData = await weatherResponse.json();
 
       console.log(`Weather for ${place.name}, ${place.country}`);
-      console.log(`Temperature now: ${weatherData.current.temperature_2m} ${temperatureUnit}`);
+      console.log(
+        `Temperature now: ${weatherData.current.temperature_2m} ${temperatureUnit}`,
+      );
       console.log(`Humidity: ${weatherData.current.relative_humidity_2m}%`);
       console.log(
         `Conditions: ${
           weatherDescriptions[weatherData.current.weather_code] ?? "Unknown"
         }`,
       );
-      console.log(`Today's high: ${weatherData.daily.temperature_2m_max[0]}${temperatureUnit}`);
-      console.log(`Today's low: ${weatherData.daily.temperature_2m_min[0]}${temperatureUnit}`);
+      console.log(
+        `Today's high: ${weatherData.daily.temperature_2m_max[0]}${temperatureUnit}`,
+      );
+      console.log(
+        `Today's low: ${weatherData.daily.temperature_2m_min[0]}${temperatureUnit}`,
+      );
+      await saveSearch(place.name);
     }
   } catch (error) {
     if (error.name === "TimeoutError") {
