@@ -41,7 +41,9 @@ if (!city) {
     locationUrl.searchParams.set("count", "1");
     locationUrl.searchParams.set("language", "en");
 
-    const locationResponse = await fetch(locationUrl);
+    const locationResponse = await fetch(locationUrl, {
+      signal: AbortSignal.timeout(8000),
+    });
 
     if (!locationResponse.ok) {
       throw new Error("The place lookup service is unavailable.");
@@ -70,7 +72,9 @@ if (!city) {
       weatherUrl.searchParams.set("timezone", "auto");
       weatherUrl.searchParams.set("forecast_days", "1");
 
-      const weatherResponse = await fetch(weatherUrl);
+      const weatherResponse = await fetch(weatherUrl, {
+        signal: AbortSignal.timeout(8000),
+      });
 
       if (!weatherResponse.ok) {
         throw new Error("The weather service is unavailable.");
@@ -90,7 +94,12 @@ if (!city) {
       console.log(`Today's low: ${weatherData.daily.temperature_2m_min[0]}°C`);
     }
   } catch (error) {
-    console.log(`Could not get the weather: ${error.message}`);
-    process.exitCode = 1;
-  }
+    if (error.name === "TimeoutError") {
+  console.log("The request took too long. Please try again.");
+} else {
+  console.log(`Could not get the weather: ${error.message}`);
 }
+
+process.exitCode = 1;
+}
+  }
