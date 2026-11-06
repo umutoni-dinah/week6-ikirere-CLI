@@ -1,0 +1,15 @@
+{
+  "name": "ikirere",
+  "version": "1.0.0",
+  "description": "A simple weather tool for the terminal",
+  "type": "module",
+  "bin": {
+    "ikirere": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
