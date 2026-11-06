@@ -34,6 +34,7 @@ const weatherDescriptions = {
 
 const dataFolder = path.join(os.homedir(), ".ikirere");
 const historyFile = path.join(dataFolder, "history.json");
+const settingsFile = path.join(dataFolder, "settings.json");
 const favoritesFile = path.join(dataFolder, "favorites.json");
 
 async function saveSearch(city) {
@@ -120,7 +121,21 @@ async function listFavorites() {
     console.log(`${index + 1}. ${city}`);
   });
 }
+async function loadSettings() {
+  try {
+    return JSON.parse(await readFile(settingsFile, "utf8"));
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return {};
+    }
+    throw error;
+  }
+}
 
+async function saveSettings(settings) {
+  await mkdir(dataFolder, { recursive: true });
+  await writeFile(settingsFile, JSON.stringify(settings, null, 2), "utf8");
+}
 const { values, positionals } = parseArgs({
   options: {
     help: { type: "boolean", short: "h" },
@@ -158,6 +173,22 @@ if (positionals[0]?.toLowerCase() === "favorite") {
   console.log("Or:  node index.js favorite list");
   process.exitCode = 1;
 }
+if (positionals[0]?.toLowerCase() === "settings") {
+  const units = positionals[1]?.toLowerCase();
+
+  if (units !== "celsius" && units !== "fahrenheit") {
+    console.log("Choose either celsius or fahrenheit.");
+    console.log("Example: node index.js settings fahrenheit");
+    process.exit(1);
+  }
+
+  const settings = await loadSettings();
+  settings.units = units;
+  await saveSettings(settings);
+
+  console.log(`Saved temperature setting: ${units}`);
+  process.exit(0);
+}
 
 if (!city) {
   console.log("Please enter a city name.");
@@ -190,6 +221,15 @@ if (!city) {
       process.exitCode = 1;
     } else {
       // Second request: use the coordinates to get today's forecast.
+      const savedSettings = await loadSettings();
+
+      const units =
+        process.env.IKIRERE_UNITS?.toLowerCase() ||
+        savedSettings.units ||
+        "celsius";
+
+      const useFahrenheit = units === "fahrenheit";
+      const temperatureUnit = useFahrenheit ? "°F" : "°C";
       const weatherUrl = new URL("https://api.open-meteo.com/v1/forecast");
 
       weatherUrl.searchParams.set("latitude", place.latitude);
