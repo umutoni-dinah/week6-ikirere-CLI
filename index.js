@@ -58,6 +58,28 @@ async function saveSearch(city) {
   await writeFile(historyFile, JSON.stringify(history, null, 2), "utf8");
 }
 
+async function showHistory() {
+  try {
+    const history = JSON.parse(await readFile(historyFile, "utf8"));
+
+    if (history.length === 0) {
+      console.log("No searches yet.");
+      return;
+    }
+
+    console.log("Recent searches:");
+    history.forEach((item, index) => {
+      console.log(`${index + 1}. ${item.city}`);
+    });
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      console.log("No search history yet. Search for a city first.");
+    } else {
+      throw error;
+    }
+  }
+}
+
 const { values, positionals } = parseArgs({
   options: {
     help: { type: "boolean", short: "h" },
@@ -72,6 +94,10 @@ if (values.help) {
 }
 
 const city = positionals.join(" ").trim();
+if (city.toLowerCase() === "history") {
+  await showHistory();
+  process.exit(0);
+}
 
 if (!city) {
   console.log("Please enter a city name.");
