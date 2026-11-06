@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+import { parseArgs } from "node:util";
 const weatherDescriptions = {
   0: "Clear sky",
   1: "Mainly clear",
@@ -24,7 +24,20 @@ const weatherDescriptions = {
   99: "Thunderstorm with hail",
 };
 
-const city = process.argv.slice(2).join(" ").trim();
+const { values, positionals } = parseArgs({
+  options: {
+    help: { type: "boolean", short: "h" }
+  },
+  allowPositionals: true
+});
+
+if (values.help) {
+  console.log("Usage: node index.js <city>");
+  console.log('Example: node index.js "Cape Town"');
+  process.exit(0);
+}
+
+const city = positionals.join(" ").trim();
 
 if (!city) {
   console.log("Please enter a city name.");
