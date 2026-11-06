@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
+
+const useFahrenheit = process.env.IKIRERE_UNITS?.toLowerCase() === "fahrenheit";
+
+const temperatureUnit = useFahrenheit ? "°F" : "°C";
+
 const weatherDescriptions = {
   0: "Clear sky",
   1: "Mainly clear",
@@ -26,9 +31,9 @@ const weatherDescriptions = {
 
 const { values, positionals } = parseArgs({
   options: {
-    help: { type: "boolean", short: "h" }
+    help: { type: "boolean", short: "h" },
   },
-  allowPositionals: true
+  allowPositionals: true,
 });
 
 if (values.help) {
@@ -79,6 +84,11 @@ if (!city) {
         "temperature_2m,relative_humidity_2m,weather_code",
       );
       weatherUrl.searchParams.set(
+        "temperature_unit",
+        useFahrenheit ? "fahrenheit" : "celsius",
+      );
+
+      weatherUrl.searchParams.set(
         "daily",
         "temperature_2m_max,temperature_2m_min",
       );
@@ -96,23 +106,23 @@ if (!city) {
       const weatherData = await weatherResponse.json();
 
       console.log(`Weather for ${place.name}, ${place.country}`);
-      console.log(`Temperature now: ${weatherData.current.temperature_2m}°C`);
+      console.log(`Temperature now: ${weatherData.current.temperature_2m} ${temperatureUnit}`);
       console.log(`Humidity: ${weatherData.current.relative_humidity_2m}%`);
       console.log(
         `Conditions: ${
           weatherDescriptions[weatherData.current.weather_code] ?? "Unknown"
         }`,
       );
-      console.log(`Today's high: ${weatherData.daily.temperature_2m_max[0]}°C`);
-      console.log(`Today's low: ${weatherData.daily.temperature_2m_min[0]}°C`);
+      console.log(`Today's high: ${weatherData.daily.temperature_2m_max[0]}${temperatureUnit}`);
+      console.log(`Today's low: ${weatherData.daily.temperature_2m_min[0]}${temperatureUnit}`);
     }
   } catch (error) {
     if (error.name === "TimeoutError") {
-  console.log("The request took too long. Please try again.");
-} else {
-  console.log(`Could not get the weather: ${error.message}`);
-}
+      console.log("The request took too long. Please try again.");
+    } else {
+      console.log(`Could not get the weather: ${error.message}`);
+    }
 
-process.exitCode = 1;
-}
+    process.exitCode = 1;
   }
+}
